@@ -14,7 +14,7 @@ module.exports = {
   },
 
   db: {
-    uri: `mongodb://localhost:45123/training`,
+    uri: `mongodb://localhost:27017/training`,
     options: {
       user: 'mishti',
       pass: 'doi',

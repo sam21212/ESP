@@ -1,3 +1,4 @@
-import PlanController from './planController';
+import CampaignMonitorController from './campaignMonitorController';
+import MailChimpController from './mailChimpConroller';
 
-export { PlanController };
+export { CampaignMonitorController, MailChimpController };
