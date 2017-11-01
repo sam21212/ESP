@@ -1,7 +1,7 @@
-import initCampaignRoutes from './espRoutes';
+import initListRoutes from './espRoutes';
 
 const initRoutes = (app) => {
-  app.use(`/lists`, initCampaignRoutes());
+  app.use(`/lists`, initListRoutes());
 };
 
 export default initRoutes;

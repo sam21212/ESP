@@ -1,34 +1,35 @@
 import express from 'express';
-import CampaignMonitorController from '../controllers/campaignMonitorController';
-import MailChimpController from '../controllers/mailChimpController';
+import { CampaignMonitorController, MailChimpController}  from '../controllers';
 
-const initCampaignRoutes = () => {
+const initListRoutes = () => {
 
-  const clientRoutes = express.Router();
+	const clientRoutes = express.Router();
 
-  clientRoutes.use((req, res, next) => {
+	clientRoutes.get('/:listid/subscribersCount', serviceSetter(), (req, res) => req.service.getSubscriberCount(req, res));
+	clientRoutes.get('/:listid/campaigns', serviceSetter(), (req, res) => req.service.listCampaign(req, res));
+
+	return clientRoutes;
+}
+
+const serviceSetter = () => {
+
+  return ((req, res, next) => {
 
   	const provider = req.headers.provider;
- 		let service;
 
   	if(provider === 'campaignMonitor') {
-  	  service = new CampaignMonitorController(req); 
+  	  req.service = new CampaignMonitorController(req); 
 		}
 
 	  if(provider === 'mailChimp') {
-			service = new MailChimpController(req);
+			req.service = new MailChimpController(req);
 		}
 
-		if(service === undefined)
+		if(req.service === undefined)
 			return res.send({message: "Invalid service provider"});
-
-		clientRoutes.get('/:listid/subscribers', (req, res) => service.getSubscriberCount(req, res));
-		clientRoutes.get('/:listid/campaigns', (req, res) => service.listCampaign(req, res));
 
   	next();
   })
-
-  return clientRoutes;
 };
 
-export default initCampaignRoutes;
+export default initListRoutes;

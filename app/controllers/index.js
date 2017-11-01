@@ -1,4 +1,4 @@
 import CampaignMonitorController from './campaignMonitorController';
-import MailChimpController from './mailChimpConroller';
+import MailChimpController from './mailChimpController';
 
 export { CampaignMonitorController, MailChimpController };

@@ -7,16 +7,14 @@ export default class CampaignMonitorController {
 
   constructor(req) {
 
-    const request = new Request(`https://api.createsend.com/api/v3.1`, {
+    this.request = new Request(`https://api.createsend.com/api/v3.1`, {
       Authorization: req.headers.authorization
     });
-
-    this.request = request;
   }
 
   getSubscriberCount(req, res) {
 
-    const listid = req.params.listid;
+    const listId = req.params.listid;
     const beforeDate = req.query.before;
     const afterDate = req.query.after;
     let before, after, subscribers;
@@ -38,70 +36,77 @@ export default class CampaignMonitorController {
         {"message": "Before Date must be greater than after Date"}));
     }
 
-    this._getCountForCampaign(listid, this.request, beforeDate)
-      .then((firstDate) => {
-         before = firstDate.TotalNumberOfRecords; 
-         return this._getCountForCampaign(listid, this.request, afterDate);
+    this._getCountForCampaign(listId, beforeDate)
+     .then((firstDate) => {
+        before = firstDate.TotalNumberOfRecords; 
+        return this._getCountForCampaign(listId, afterDate);
       })
-      .then((secondDate) => {
+     .then((secondDate) => {
         after = secondDate.TotalNumberOfRecords;
         subscribers = {totalActive: after - before};
         Responder.success(res, subscribers);
       })
-      .catch((err) => {
+     .catch((err) => {
         Responder.operationFailed(res, new ParameterInvalidError(this._errorHandler(err)));
       });   
   }
 
   listCampaign(req, res) {
 
-    const listid = req.params.listid;
-    const clientid = req.query.clientid;
     let listCampaign = [];
+    const listId = req.params.listid;
+    const clientId = req.query.clientid;
 
-    this._getCampaigns(clientid, this.request)
-      .then((campaigns) => {
+    const gettingLists = (campaign) => {
+      this._getListForCampaign(campaign.CampaignID)
+       .then((result) => {
+          result.Lists.forEach((list) => {
+            if(list.ListID == listId) 
+              listCampaign.push(campaign.CampaignID) 
+          })
+      })
+    }
 
+    this._getCampaigns(clientId)
+     .then((campaigns) => {
         let loopCount = campaigns.length;
         campaigns.forEach((campaign) => {
-          this._getListForCampaign(campaign.CampaignID, this.request)
-            .then((result) => {
-              result.Lists.forEach((list) => {
-                if(list.ListID == listid) 
-                    listCampaign.push(campaign.CampaignID) 
-              })
-            })
-            .then(() => {
+          gettingLists(campaign)
+           .then(() => {
               loopCount--;
-              if(loopCount == 0) Responder.success(res, listCampaign);              
+              if(loopCount == 0) Responder.success(res, {"List Campaign": listCampaign});              
           })
         })
       })
-      .catch((err) =>{
+     .catch((err) =>{
         Responder.operationFailed(res, new ParameterInvalidError(this._errorHandler(err)));
       })
     }
 
-  _getCountForCampaign(listid, request, date) {
+  _getCountForCampaign(listId, date) {
 
-    return request.get(`/lists/${listid}/active.json`, `date=${date}`);
+    return this.request.get(`/lists/${listId}/active.json`, `date=${date}`);
   }
 
-  _getCampaigns(clientid, request) {
+  _getCampaigns(clientid) {
 
-    return request.get(`/clients/${clientid}/campaigns.json`);  
+    return this.request.get(`/clients/${clientid}/campaigns.json`);  
   };
 
-  _getListForCampaign(campaignid, request) {
+  _getListForCampaign(campaignid) {
    
-    return request.get(`/campaigns/${campaignid}/listsandsegments.json`);
+    return this.request.get(`/campaigns/${campaignid}/listsandsegments.json`);
   }
 
   _errorHandler(err) {
-    if(err.Code == 101) 
+
+    if(err.Code === 101) 
       return {message: "ListID provided must be valid"};
 
-    if(err.Code == 102)
+    if(err.Code === 102)
       return {message: "ClientId provided must be valid"};
+
+    if(err.Code === 50) 
+      return {message: "API key must be valid"};
   }
 }

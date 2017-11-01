@@ -6,19 +6,16 @@ import { ParameterInvalidError } from '../errors';
 export default class MailChimpController {
 
   constructor(req) {
-    const request = new Request(`https://us17.api.mailchimp.com/3.0`, {
+    this.request = new Request(`https://us17.api.mailchimp.com/3.0`, {
       Authorization: req.headers.authorization
     });
-
-    this.request = request;
   }
 
   getSubscriberCount(req, res) {
 
-    const listid = req.params.listid;
+    const listId = req.params.listid;
     const beforeDate = req.query.before;
     const afterDate = req.query.after;
-    let before, after, subscribers;
 
     const beforeDateValidate = Validator.date(beforeDate);
 
@@ -37,9 +34,9 @@ export default class MailChimpController {
         {"message": "Before Date must be greater than after Date"}));
     }
 
-    this._getCountForChimp(listid, this.request, beforeDate, afterDate)
+    this._getCountForChimp(listId, beforeDate, afterDate)
       .then((result) => {
-        Responder.success(res, {result: result.total_items});
+        Responder.success(res, {totalActive: result.total_items});
       })
       .catch((err) => {
         return Responder.operationFailed(res, new ParameterInvalidError(this._errorHandler(err)));
@@ -48,31 +45,38 @@ export default class MailChimpController {
 
   listCampaign(req, res) {
 
-    const listid = req.params.listid;
+    const listId = req.params.listid;
 
-    this._getListForChimp(listid, this.request)
-      .then((result) => {
-        Responder.success(res, {result: result.total_items}) 
+    this._getListForChimp(listId)
+     .then((result) => {
+        Responder.success(res, {"List Campaign": result.total_items}) 
       })
-      .catch((err) => {
+     .catch((err) => {
         Responder.operationFailed(res, new ParameterInvalidError(this._errorHandler(err)));
       });       
   }
 
-  _getListForChimp(listid, request) {
+  _getListForChimp(listId) {
 
-    return request.get('/campaigns', `list_id=${listid}`);
+    return this.request.get('/campaigns', `list_id=${listId}`);
   }
 
-  _getCountForChimp(listid, request, beforeDate, afterDate) {
+  _getCountForChimp(listId, beforeDate, afterDate) {
 
-    return request.get(`/lists/${listid}/members`, `since_timestamp_opt  
+    return this.request.get(`/lists/${listId}/members`, `since_timestamp_opt  
       =${afterDate}&before_timestamp_opt=${beforeDate}`);
   }
 
   _errorHandler(err) {
-    if(err.status == 404) {
+
+    if(err.status === 404) {
       return {message: "ListID provided must be valid"};
     }
+
+    if(err.status === 401)
+      return {message: "API key must be valid"};
+
+    if(err.status === 403)
+      return {message: "API key provided is linked to different datacenter"};
   }
 }
